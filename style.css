@@ -1,0 +1,25 @@
+.prod{
+    border:1px solid #1f068a;
+    border-radius: 15px;
+    width: 150px;
+    margin: 10px;
+    padding: 10px;
+    text-align: center;
+    transition: 0.3s;
+}
+.bout{
+    color: #f5f0f0;
+    background-color: blue; 
+    border: none;
+    padding:8px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+    
+}
+.prod:hover{
+   transform: scale(1.05);
+}
+.bout:hover{
+    background-color: #003ecb;
+}
