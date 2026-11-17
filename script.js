@@ -1,39 +1,65 @@
-const produit = [
-    {
-        nom: "Ordinateur",
-        prix: 700000
-    },
-    {
-        nom: "Telephone",
-        prix: 400000
-    },
-    {
-        nom: "Frigidaire",
-        prix: 200000
-    }
-];
-
 const prod = document.getElementById("produit");
 const articles = document.getElementById("articles");
 const nompanier = document.getElementById("panier");
 
-// Alaina ny ao amin'ny localStorage
 let paniers = JSON.parse(localStorage.getItem("monPanier")) || [];
 
-// Asehoy ny vokatra eny am-piandohana
-for(let i = 0; i < produit.length; i++){
-    prod.innerHTML += `
-    <div class="prod">
-        <h3>${produit[i].nom}</h3>
-        <p>Prix: ${produit[i].prix} Ar</p>
-        <button class="bout">Acheter</button>
-    </div>
-    `;
+// 1. Fonction maka ny vokatra avy any amin'ny API sy mampiseho azy
+async function chargerProduits() {
+    try {
+        // Mampiseho hafatra miandry kely mba hahafantaran'ny mpampiasa fa miasa ny pejy
+        prod.innerHTML = "<p>Chargement des produits...</p>";
+
+        const valiny = await fetch("https://fakestoreapi.com/products?limit=4");
+        const produitsAPI = await valiny.json();
+
+        prod.innerHTML = ""; // Fafana ilay hafatra miandry
+
+        for(let i = 0; i < produitsAPI.length; i++){
+            prod.innerHTML += `
+            <div class="prod">
+                <img src="${produitsAPI[i].image}" alt="${produitsAPI[i].title}" style="width:100px; height:100px; object-fit:contain;">
+                <h3>${produitsAPI[i].title}</h3>
+                <p>Prix: ${produitsAPI[i].price} $</p>
+                <button class="bout">Acheter</button>
+            </div>
+            `;
+        }
+
+        // 2. ZAVA-DEHIBE: Eto anatiny ihany no asiana ny fihainoana ny bokotra "Acheter"
+        // satria eto vao vita foronina tao amin'ny HTML ireo bokotra ireo!
+        const boutons = document.querySelectorAll(".bout");
+        
+        for(let i = 0; i < boutons.length; i++){
+            boutons[i].addEventListener("click", () => {
+                let produitSelectionne = produitsAPI[i];
+
+                // Mariho fa "title" sy "price" no anaran'ny saha ao amin'ny API (fa tsy "nom" sy "prix" intsony)
+                let produitExistant = paniers.find(function(p) {
+                    return p.nom === produitSelectionne.title;
+                });
+
+                if (!produitExistant) {
+                    paniers.push({
+                        nom: produitSelectionne.title,
+                        prix: produitSelectionne.price,
+                        quantite: 1
+                    });
+                } else {
+                    produitExistant.quantite++;
+                }
+
+                afficherPanier();
+            });
+        }
+
+    } catch (erreur) {
+        prod.innerHTML = "<p>Erreur lors du chargement des produits.</p>";
+        console.error(erreur);
+    }
 }
 
-const boutons = document.querySelectorAll(".bout");
-
-// Fonction mitantana ny fisehon'ny panier
+// 3. Ilay fonction mitantana ny panier (mitovy tamin'ny teo ihany, novaina kely ho $ ny vola)
 function afficherPanier() {
     nompanier.innerHTML = "";
     let totalPanier = 0;
@@ -44,30 +70,27 @@ function afficherPanier() {
         totalPanier += totalArticle;
         totalQuantite += paniers[i].quantite;
 
-        // Raha 1 ny quantité dia atao disabled ilay bokotra -
         let estDisabled = paniers[i].quantite === 1 ? "disabled" : "";
 
         nompanier.innerHTML += `
         <p>
-            - ${paniers[i].nom} | Quantité : ${paniers[i].quantite} | ${totalArticle} Ar
-            <button class="diminuer" data-index="${i}" ${estDisabled}> Diminuer </button>
+            - ${paniers[i].nom} | Qté : ${paniers[i].quantite} | ${totalArticle.toFixed(2)} $
+            <button class="diminuer" data-index="${i}" ${estDisabled}> - </button>
             <button class="supprimer" data-nom="${paniers[i].nom}">Supprimer</button>
         </p>
         `;
     }
 
-    nompanier.innerHTML += `<hr><strong>Total: ${totalPanier} Ar</strong>`;
+    nompanier.innerHTML += `<hr><strong>Total: ${totalPanier.toFixed(2)} $</strong>`;
 
     let arts = totalQuantite > 1 ? "Articles" : "Article";
     articles.innerHTML = `
         <p>${totalQuantite} ${arts}</p>
-        <p>Total: ${totalPanier} Ar</p>
+        <p>Total: ${totalPanier.toFixed(2)} $</p>
     `;
 
-    // Tahirizina ao amin'ny localStorage
     localStorage.setItem("monPanier", JSON.stringify(paniers));
 
-    // 1. Fikarakarana ny bokotra Diminuer (-)
     let diminuerBtns = nompanier.querySelectorAll(".diminuer");
     for(let k = 0; k < diminuerBtns.length; k++){
         diminuerBtns[k].addEventListener("click", function() {
@@ -79,44 +102,18 @@ function afficherPanier() {
         });
     }
 
-    // 2. Fikarakarana ny bokotra Supprimer amin'ny alalan'ny FILTER()
     let supprimerBtns = nompanier.querySelectorAll(".supprimer");
     for(let j = 0; j < supprimerBtns.length; j++){
         supprimerBtns[j].addEventListener("click", function() {
             let nomProduit = this.getAttribute("data-nom");
-            
-            // Ampiasaina ny filter() hamoronana tabilao vaovao tsy misy an'io entana io
             paniers = paniers.filter(function(p) {
                 return p.nom !== nomProduit;
             });
-            
-            afficherPanier(); // Havaozina ny pejy sy ny localStorage
+            afficherPanier();
         });
     }
 }
 
-// Antsoina rehefa misokatra ny pejy
+// Antsoina avy hatrany izy roa eo am-panombohana
+chargerProduits();
 afficherPanier();
-
-// Rehefa tsindrina ny "Acheter"
-for(let i = 0; i < boutons.length; i++){
-    boutons[i].addEventListener("click", () => {
-        let produitSelectionne = produit[i];
-
-        let produitExistant = paniers.find(function(p) {
-            return p.nom === produitSelectionne.nom;
-        });
-
-        if (!produitExistant) {
-            paniers.push({
-                nom: produitSelectionne.nom,
-                prix: produitSelectionne.prix,
-                quantite: 1
-            });
-        } else {
-            produitExistant.quantite++;
-        }
-
-        afficherPanier();
-    });
-}
